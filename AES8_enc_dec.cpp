@@ -1,7 +1,6 @@
 // AES8.cpp : 8비트 구현
 // - 암호화, 복호화, 복호화-동치변형 까지
 
-
 #include <stdio.h>
 
 typedef unsigned char byte;  // byte라는 데이터 타입 만들기 GF(2^8)
