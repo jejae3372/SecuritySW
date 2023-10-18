@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 
+
 typedef unsigned char byte;  // byte라는 데이터 타입 만들기 GF(2^8)
 
 byte Sbox[256] = {
