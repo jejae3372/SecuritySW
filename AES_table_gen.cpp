@@ -116,20 +116,55 @@ void AES32_Enc_Table_generation() {
 void AES32_Dec_Table_generation() {
 
     u32 Td0[256], Td1[256], Td2[256], Td3[256], Td4[256];
-    byte sx, sx02, sx04, sx08, sx0e, sx0b, sx0d, sx09;
-    u32 value;
+
     // [실습] - 복화화용 테이블 만들기
+    //INvMixColumns[ISbox[x]]
+    /*
+        [e b d 9]
+        [9 e b d]
+        [d 9 e b]
+        [b d 9 e]
+
+        sx = ISbox[x]
+        //Td0[x] = [ e*isx, 9*isx, d*isx, b*isx ] -> u32
+        Td1[x] = [b*isx, e*isx, 9*isx, d*isx]
+        Td2[x] = [d*isx, b*isx, e*isx, 9*isx]
+    */
+    byte sx, sx02, sx04, sx08, sx0e, sx0b, sx0d, sx09;
+    u32 value; 
+    
+    // e = 1110 = 8 + 4 + 2     => e * x = 8 * x ^ 4 * x ^ 2 * x = 2 * 2 * 2 * x ^ 2 * 2 * x ^ 2 * x
+    // 9 = 1001 = 8 + 1         => 9 * x = 8 * x ^ x = 2 * 2 * 2 * x ^ x
+    // d = 1101 = 8 + 4 + 1     => d * x = 8 * x ^ 4 * x ^ x = 2 * 2 * 2 x ^ 2 * 2 * x ^ x
+    // b = 1011 = 8 + 2 + 1     => b * x = 8 * x ^ 2 * x ^ x = 2 * 2 * 2 * x ^ 2 * 2 * x ^ x
+    
+    //e * x => sx08 ^ sx04 ^ sx02
+    //9 * x => sx08 ^ sx
+    //d * x => sx08 ^ sx04 ^ sx
+    //b * x => sx08 ^ sx02 ^ sx
 
     for (int i = 0; i < 256; i++) {
         sx = ISbox[i];  // 02*x
-        value = (GF_mul(0x0e, sx) << 24) | GF_mul(0x09, sx) << 16 | GF_mul(0x0d, sx) << 8 | GF_mul(0x0b, sx); 
-        Td0[i] = value;   // Td0[x] = [ 0e*x, 09*x, 0d*x, 0b*x ]
-        Td1[i] = (Td0[i] >> 8) | (Td0[i] << 24);
-        Td2[i] = (Td1[i] >> 8) | (Td1[i] << 24);
-        Td3[i] = (Td2[i] >> 8) | (Td2[i] << 24);
-        Td4[i] = (sx << 24) | (sx << 16) | (sx << 8) | sx;
-    }
+        //Td0[x] = [ e*sx, 9*sx, d*sx, b*sx ] -> u32
+        //sx08 = 2 * 2 * 2 * x ; sx04 = 2 * 2 * x; sx02 = 2 * x
+        sx02 = xtime(sx);
+        sx04 = xtime(sx02);
+        sx08 = xtime(sx04);
+        sx0e = sx08 ^ sx04 ^ sx02;  //e*sx
+        sx09 = sx08 ^ sx;    //b*sx
+        sx0d = sx08 ^ sx04 ^ sx;    //d*sx
+        sx0b = sx08 ^ sx02 ^ sx;    //b*sx
 
+        value = (sx0e << 24) ^ (sx09 << 16) ^ (sx0d << 8) ^ (sx0b); 
+        Td0[i] = value;   // Td0[x] = [ 0e*x, 09*x, 0d*x, 0b*x ]
+        //Td0[]의 lsb -> msb ^ 나머지 비트를 오른쪽으로 한바이트씩 순환 
+        Td1[i] = ((Td0[i] & 0xff) << 24) ^ (Td0[i] >> 8);
+        Td2[i] = ((Td1[i] & 0xff) << 24) ^ (Td1[i] >> 8);
+        Td3[i] = ((Td2[i] & 0xff) << 24) ^ (Td2[i] >> 8);
+        //isx = ISbox[x]; Td4[x] = [isx, isx, isx, isx];
+        Td4[i] = (sx << 24) ^ (sx << 16) ^ (sx << 8) ^ sx;      // ^(xor) 나 |(or) 상관 없음
+        
+    }
 
     printf("== AES32 Decryption Table ==\n\n");
 
