@@ -1,11 +1,12 @@
-// 파일 암호화: AES-ECB 모드
+// 파일 암호화: AES-CTR 모드
 
 
 #include <iostream>
 #include <fstream>
 using namespace std;
 
-#include "AES32.cpp"
+//(mac vscode로 실행하면서 헤더파일의 인식 오류가 있어서 cpp파일을 include했습니다.)
+#include "AES32.cpp"    
 
 //state[] xor value[] --> state[]  (업데이트)
 void Xor_state(byte state[16], byte value[16]){
@@ -20,13 +21,13 @@ void Copy_state(byte src[16], byte dest[16]){
     }
 }
 
-//AES_CRT는 별도의 암복호화 함수를 구현 X -> 암복호화가 양쪽으로 동일한 과정
-void AES_CRT(const char* filePT, byte key[16], byte IV[16], const char* fileCT) {
+//AES_CTR는 별도의 암복호화 함수를 구현 X -> 암복호화가 양쪽으로 동일한 과정
+void AES_CTR(const char* fileIN, byte key[16], byte IV[16], const char* fileOut) {
     ifstream fin;
     ofstream fout;
     char ch;
 
-    fin.open(filePT, ios::binary); // 입력 파일을 연다
+    fin.open(fileIN, ios::binary); // 입력 파일을 연다
     if (fin.fail()) {
         cout << "Input file Open Error!" << endl;
         return;
@@ -36,20 +37,20 @@ void AES_CRT(const char* filePT, byte key[16], byte IV[16], const char* fileCT) 
     int file_len;
     fin.seekg(0, fin.end);
     file_len = fin.tellg();
-    cout << "file size(plaintext) = " << file_len << "bytes" << endl;
+    cout << "file size(In) = " << file_len << "bytes" << endl;
     fin.seekg(0, fin.beg);
 
-    fout.open(fileCT, ios::binary); // 출력 파일을 만든다
+    fout.open(fileOut, ios::binary); // 출력 파일을 만든다
     if (fout.fail()) {
         cout << "Output file Open Error!" << endl;
         return;
     }
 
     int num_block, remainder;
-    num_block = file_len / 16 ; //나누어 떨어지면 한블록 더
+    num_block = file_len / 16 ; //총 몇 블록인지 구한다,
     remainder = file_len - 16 * (num_block); // 마지막 블록에 포함될 평문 바이트(0~15)
 
-    cout << "file size(ciphertext) = " << file_len << "bytes" << endl;
+    cout << "file size(Out) = " << file_len << "bytes" << endl;
 
     //AES32 키스케줄
     u32 rk[11][4];
@@ -78,6 +79,7 @@ void AES_CRT(const char* filePT, byte key[16], byte IV[16], const char* fileCT) 
             }
         }
     }
+
     //마지막블록은 평문의 길이만큼 까지만 xor 연산
     AES32_Encrypt(iv, rk, iv_enc);
     fin.read((char*)buffer, remainder);
@@ -88,7 +90,7 @@ void AES_CRT(const char* filePT, byte key[16], byte IV[16], const char* fileCT) 
 }
  
 
-void File_CBC_test() {
+void File_CTR_test() {
     const char* pPT = "PT.bin";
     const char* pCT = "CT.bin";
     const char* pDecPT = "DecPT.bin";
@@ -98,19 +100,17 @@ void File_CBC_test() {
         key[i] = i;
         IV[i] = i;
     }
-
-    // ECB : Electronic CodeBook  --> 좋지 않은 운영모드
     
-    cout << "AES ECB Encrypt..." << endl;
-    AES_CRT(pPT, key, IV, pCT);
+    cout << "AES CTR Encrypt..." << endl;
+    AES_CTR(pPT, key, IV, pCT);
 
-    cout << "AES ECB Decrypt..." << endl;
-    AES_CRT(pCT, key, IV, pDecPT);
+    cout << "AES CTR Decrypt..." << endl;
+    AES_CTR(pCT, key, IV, pDecPT);
 
 }
 
 
 int main()
 {
-    File_CBC_test(); //ECB 암호화/복호화 테스트
+    File_CTR_test();
 }
